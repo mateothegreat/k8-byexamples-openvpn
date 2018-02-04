@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    openvpn: vpn.streaming-platform.com
+  name: openvpn
+spec:
+  # type: NodePort
+  type: LoadBalancer
+  ports:
+  - port: 1194
+    protocol: TCP
+    targetPort: 1194
+  selector:
+    openvpn: vpn.streaming-platform.com
+---

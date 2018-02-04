@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: openvpn-pki
+type: Opaque
+data:
+    private.key: "$BASE64_KEY"
+    ca.crt: "$BASE64_CA"
+    certificate.crt: "$BASE64_ISSUED"
+    dh.pem: "$BASE64_DH"
+    ta.key: "$BASE64_TA"
