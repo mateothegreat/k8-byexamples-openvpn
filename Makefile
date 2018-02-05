@@ -20,8 +20,8 @@ redeploy:   deployment-delete configmaps-delete service-delete deploy
 ## Generate client certificate (make client NAME="my-client-name")
 client:
 
-	docker run --user=$(id -u) 	-v $(PKI_VOLUME):/etc/openvpn -
-								ti ptlange/openvpn easyrsa build-client-full $(NAME) nopass
+	docker run --user=$(id -u) 	-v $(PKI_VOLUME):/etc/openvpn \
+								-ti ptlange/openvpn easyrsa build-client-full $(NAME) nopass
 
 	docker run --user=$(id -u)  -e OVPN_SERVER_URL=tcp://$(CN):1194     \
 								-v $(PKI_VOLUME):/etc/openvpn           \
