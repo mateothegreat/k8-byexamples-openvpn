@@ -1,0 +1,30 @@
+server ${OVPN_NETWORK_ROUTE}
+topology subnet
+verb ${OVPN_VERB}
+
+# Filled by Secrets object. Use generic names
+key ${EASYRSA_PKI}/private.key
+ca ${EASYRSA_PKI}/ca.crt
+cert ${EASYRSA_PKI}/certificate.crt
+dh ${EASYRSA_PKI}/dh.pem
+tls-auth ${EASYRSA_PKI}/ta.key
+
+key-direction 0
+keepalive 10 60
+persist-key
+persist-tun
+push "block-outside-dns"
+
+proto ${OVPN_PROTO}
+cipher ${OVPN_CIPHER}
+tls-cipher ${OVPN_TLS_CIPHER}
+
+# Rely on scheduler to do port mapping, internally always 1194
+port 1194
+dev tun0
+
+user nobody
+group nogroup
+
+push "dhcp-option DOMAIN ${OVPN_K8S_DOMAIN}"
+push "dhcp-option DNS ${OVPN_K8S_DNS}"
