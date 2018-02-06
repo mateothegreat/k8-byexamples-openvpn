@@ -9,7 +9,7 @@ all: 	help
 ## Perform all certficate tasks before being able to issue client certs
 init:   pki-generate crl-generate pki-volume-copy pki-secret-create
 ## Delete all data & resources (In order to delete the data volume for cert issuing you must run `make pki-volume-delete` manually)
-delete:  configmaps-delete deployment-delete pki-delete-container
+delete:  configmaps-delete deployment-delete service-delete pki-delete-container
 
 ## Install Deployment & ConfigMap Resources (make HOSTNAME=myvpn.domain.com deploy)
 deploy:     configmaps-install deployment-install service-install
