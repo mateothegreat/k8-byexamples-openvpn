@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    openvpn: "$HOSTNAME"
+    openvpn: "$CN"
   name: openvpn
 spec:
   # type: NodePort

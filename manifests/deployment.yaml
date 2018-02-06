@@ -8,7 +8,7 @@ spec:
   template:
     metadata:
       labels:
-        openvpn: vpn.streaming-platform.com
+        openvpn: $CN
     spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 60
