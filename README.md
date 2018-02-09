@@ -15,6 +15,16 @@
 
 > k8 by example -- straight to the point, simple execution.
 
+## Easy start:
+
+```sh
+make deploy install
+
+<push your docker image>
+
+make issue-cert NAME=myuser-1
+```
+
 ## Getting Started
 
 Export your configuration variables (keeps you from having to pass these on each command):

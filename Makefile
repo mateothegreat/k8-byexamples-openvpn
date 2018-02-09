@@ -5,21 +5,33 @@
 #  \__, /\____/_/ /_/ /_/\__,_/\__/\___/\____/\__,_/
 # /____                     matthewdavis.io, holla!
 #
-include .make/Makefile.inc
+# include .make/Makefile.inc
+include $(MAKE_INCLUDE)/Makefile.inc
 
 NAME	    ?= docker-alpine-openvpn
 VERSION	    ?= 1.0.0
-NS			?= infra-openvpn
+NS			?= default
 CN			?= vpn.streaming-platform.com
 DATA_VOLUME	?= openvpn-data
+REMOTE_TAG  ?= gcr.io/bebuildin/cluster-1/infra-openvpn:latest
 export
 
-setup:  prepare pki config copy build push-gcloud
+## Performs all setup tasks (make prepare pki config copy build). Push the docker image to your repo & next just make issue-cert NAME=cert
+deploy: setup install
 
+setup:  prepare pki config copy build
+
+## Delete docker volume and kubernetes deployment & service
+clean: delete
+
+	-docker rm -f -v openvpn
+
+## Prepare the docker volume for storing vpn config and cert data
 prepare:
 
 	docker volume create --name $(DATA_VOLUME)
 
+## Generate openvpn configurations
 config: prepare
 # -u for the VPN server address and port
 # -n for all the DNS servers to use
@@ -43,15 +55,17 @@ config: prepare
 
 	docker run --net=none -v openvpn-data:/etc/openvpn -i --rm kylemanna/openvpn cat /etc/openvpn/openvpn.conf
 
+## Generate certificates
 pki: prepare
 
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it -e EASYRSA_KEY_SIZE=1024 kylemanna/openvpn ovpn_initpki nopass yes
 
+## Copy all configuration and certificate data from docker volume to ./openvpn
 copy:
 
 	# Start container so we can line up all of the data
 	rm -rf openvpn
-	-docker kill openvpn
+	-docker rm -f openvpn
 
 
 	docker run --net=none --rm -d -v $(DATA_VOLUME):/etc/openvpn kylemanna/openvpn ovpn_copy_server_files
@@ -59,35 +73,31 @@ copy:
 
 	docker cp openvpn:/etc/openvpn openvpn
 
+## Build docker image with config & cert data
 build:
 
 	docker build --rm --tag $(NAME):$(VERSION) .
 	docker tag $(NAME):$(VERSION) $(REMOTE_TAG)
 
-clean:
-
-	-docker rm -f -v openvpn
-
+## Push docker image using `gcloud`
 push-gcloud:
 
 	gcloud docker -- push $(REMOTE_TAG)
 
+## Dumps docker volume (certs and data) to a tarball locally
 backup:
 
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm kylemanna/openvpn tar -cvf - -C /etc openvpn | xz > openvpn-backup.tar.xz
 
+## Uses local tarball to populate docker volume
 restore:
 
 	docker volume create --name $(DATA_VOLUME)
 	xzcat openvpn-backup.tar.xz | docker run -v $OVPN_DATA:/etc/openvpn -i kylemanna/openvpn tar -xvf - -C /etc
 
-delete: delete-deployment delete-service
 
-	docker volume rm $(DATA_VOLUME)
-	rm -rf openvpn
+## Generate client certificate (make issue-client NAME="my-client-name")
+issue-client:
 
-## Generate client certificate (make client NAME="my-client-name")
-issue-%:
-
-	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it kylemanna/openvpn easyrsa build-client-full $* nopass
-	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm kylemanna/openvpn ovpn_getclient $* > $*.ovpn
+	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it kylemanna/openvpn easyrsa build-client-full $(NAME) nopass
+	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm kylemanna/openvpn ovpn_getclient $(NAME) > $(NAME).ovpn
