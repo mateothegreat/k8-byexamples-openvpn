@@ -1,3 +1,12 @@
+#                                 __                 __
+#    __  ______  ____ ___  ____ _/ /____  ____  ____/ /
+#   / / / / __ \/ __ `__ \/ __ `/ __/ _ \/ __ \/ __  /
+#  / /_/ / /_/ / / / / / / /_/ / /_/  __/ /_/ / /_/ /
+#  \__, /\____/_/ /_/ /_/\__,_/\__/\___/\____/\__,_/
+# /____                     matthewdavis.io, holla!
+#
+include .make/Makefile.inc
+
 NAME	    ?= docker-alpine-openvpn
 VERSION	    ?= 1.0.0
 NS			?= infra-openvpn
@@ -5,11 +14,13 @@ CN			?= vpn.streaming-platform.com
 DATA_VOLUME	?= openvpn-data
 export
 
+setup:  prepare pki config copy build push-gcloud
+
 prepare:
 
 	docker volume create --name $(DATA_VOLUME)
 
-config:
+config: prepare
 # -u for the VPN server address and port
 # -n for all the DNS servers to use
 # -s to define the VPN subnet (as it defaults to 10.2.0.0 which is used by Kubernetes already)
@@ -21,9 +32,9 @@ config:
 
 	@docker run --net=none 	-v $(DATA_VOLUME):/etc/openvpn --rm \
 				kylemanna/openvpn ovpn_genconfig -d	-N -u tcp://$(CN) 	\
-													-n 10.15.240.10 \
-													-p "route 10.12.0.0 255.255.0.0" \
-													-p "route 10.15.0.0 255.255.0.0" \
+													-n 10.11.240.10 \
+													-p "route 10.8.0.0 255.255.0.0" \
+													-p "route 10.11.0.0 255.255.0.0" \
 													-p "dhcp-option DOMAIN cluster.local" \
 													-p "dhcp-option DOMAIN svc.cluster.local" \
 													-p "dhcp-option DOMAIN default.svc.cluster.local"
@@ -32,7 +43,7 @@ config:
 
 	docker run --net=none -v openvpn-data:/etc/openvpn -i --rm kylemanna/openvpn cat /etc/openvpn/openvpn.conf
 
-pki:
+pki: prepare
 
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it -e EASYRSA_KEY_SIZE=1024 kylemanna/openvpn ovpn_initpki nopass yes
 
@@ -42,9 +53,9 @@ copy:
 	rm -rf openvpn
 	-docker kill openvpn
 
-	# docker run -v $(DATA_VOLUME):/etc/openvpn -d -p 1194:1194/udp --cap-add=NET_ADMIN --name openvpn kylemanna/openvpn
 
 	docker run --net=none --rm -d -v $(DATA_VOLUME):/etc/openvpn kylemanna/openvpn ovpn_copy_server_files
+	docker run -v $(DATA_VOLUME):/etc/openvpn -d -p 1194:1194/udp --cap-add=NET_ADMIN --name openvpn kylemanna/openvpn
 
 	docker cp openvpn:/etc/openvpn openvpn
 
@@ -53,19 +64,13 @@ build:
 	docker build --rm --tag $(NAME):$(VERSION) .
 	docker tag $(NAME):$(VERSION) $(REMOTE_TAG)
 
-	# docker run --cap-add=NET_ADMIN -it $(NAME):$(VERSION)
-
 clean:
 
-	docker rm -f -v openvpn
+	-docker rm -f -v openvpn
 
 push-gcloud:
 
 	gcloud docker -- push $(REMOTE_TAG)
-
-
-deploy:     install-deployment install-service
-rollback:   delete-deployment delete-service
 
 backup:
 
@@ -76,9 +81,6 @@ restore:
 	docker volume create --name $(DATA_VOLUME)
 	xzcat openvpn-backup.tar.xz | docker run -v $OVPN_DATA:/etc/openvpn -i kylemanna/openvpn tar -xvf - -C /etc
 
-watch:
-
-	docker logs -f --tail all --timestamps openvpn
 delete: delete-deployment delete-service
 
 	docker volume rm $(DATA_VOLUME)
@@ -89,40 +91,3 @@ issue-%:
 
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it kylemanna/openvpn easyrsa build-client-full $* nopass
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm kylemanna/openvpn ovpn_getclient $* > $*.ovpn
-
-# LIB
-install-%:
-	@envsubst < manifests/$*.yaml | kubectl --namespace $(NS) apply -f -
-
-delete-%:
-	@envsubst < manifests/$*.yaml | kubectl --namespace $(NS) delete --ignore-not-found -f -
-
-status-%:
-	@envsubst < manifests/$*.yaml | kubectl --namespace $(NS) rollout status -w -f -
-
-dump-%:
-	envsubst < manifests/$*.yaml
-## Find first pod and follow log output
-logs:
-	kubectl --namespace $(NS) logs -f $(shell kubectl get pods --all-namespaces -lapp=$(APP) -o jsonpath='{.items[0].metadata.name}')
-
-all: help
-# Help Outputs
-GREEN  		:= $(shell tput -Txterm setaf 2)
-YELLOW 		:= $(shell tput -Txterm setaf 3)
-WHITE  		:= $(shell tput -Txterm setaf 7)
-RESET  		:= $(shell tput -Txterm sgr0)
-help:
-
-	@echo "\nUsage:\n\n  ${YELLOW}make${RESET} ${GREEN}<target>${RESET}\n\nTargets:\n"
-	@awk '/^[a-zA-Z\-\_0-9]+:/ { \
-		helpMessage = match(lastLine, /^## (.*)/); \
-		if (helpMessage) { \
-			helpCommand = substr($$1, 0, index($$1, ":")-1); \
-			helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
-			printf "  ${YELLOW}%-20s${RESET} ${GREEN}%s${RESET}\n", helpCommand, helpMessage; \
-		} \
-	} \
-	{ lastLine = $$0 }' $(MAKEFILE_LIST)
-	@echo
-# EOLIB

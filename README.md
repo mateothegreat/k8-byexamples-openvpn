@@ -20,9 +20,9 @@
 Export your configuration variables (keeps you from having to pass these on each command):
 
 ````sh
-export NS=infra-openvpn
-export CN=vpn.streaming-platform.com
-export REMOTE_TAG=gcr.io/streaming-platform-devqa/cluster-2/infra-openvpn:latest
+export NS=infra
+export CN=k8.yomateo.io
+export REMOTE_TAG=gcr.io/bebuildin/cluster-1/infra-openvpn:latest
 ```
 
 First we need to generate the certificates used for issuing client certs:
