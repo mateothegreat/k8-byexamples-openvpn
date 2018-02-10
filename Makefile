@@ -5,8 +5,8 @@
 #  \__, /\____/_/ /_/ /_/\__,_/\__/\___/\____/\__,_/
 # /____                     matthewdavis.io, holla!
 #
-# include .make/Makefile.inc
-include $(MAKE_INCLUDE)/Makefile.inc
+include .make/Makefile.inc
+# include $(MAKE_INCLUDE)/Makefile.inc
 
 NAME	    ?= docker-alpine-openvpn
 VERSION	    ?= 1.0.0
