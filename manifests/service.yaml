@@ -5,8 +5,8 @@ metadata:
     openvpn: "$CN"
   name: openvpn
 spec:
-  type: LoadBalancer
-  loadBalancerIP: $LOADBALANCER_IP
+  # type: LoadBalancer
+  # loadBalancerIP: $LOADBALANCER_IP
   ports:
   - port: 1194
     protocol: TCP

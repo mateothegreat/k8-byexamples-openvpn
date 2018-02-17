@@ -15,6 +15,7 @@ CN				?= vpn.streaming-platform.com
 DATA_VOLUME		?= openvpn-data
 REMOTE_TAG  	?= gcr.io/streaming-platform-devqa/cluster-4/infra-openvpn:latest
 APP				?= openvpn
+DNS				?= 
 LOADBALANCER_IP ?= 
 export
 
@@ -34,7 +35,7 @@ prepare:
 	docker volume create --name $(DATA_VOLUME)
 
 ## Generate openvpn configurations
-config: guard-PODS_SUBNET guard-SERVICES_SUBNET prepare
+config: guard-PODS_SUBNET guard-SERVICES_SUBNET guard-DNS prepare
 # -u for the VPN server address and port
 # -n for all the DNS servers to use
 # -s to define the VPN subnet (as it defaults to 10.2.0.0 which is used by Kubernetes already)
@@ -46,7 +47,7 @@ config: guard-PODS_SUBNET guard-SERVICES_SUBNET prepare
 
 	@docker run --net=none 	-v $(DATA_VOLUME):/etc/openvpn --rm \
 				kylemanna/openvpn ovpn_genconfig -d	-N -u tcp://$(CN) 	\
-													-n 10.11.240.10 \
+													-n $(DNS) \
 													-p "route $(PODS_SUBNET)" \
 													-p "route $(SERVICES_SUBNET)" \
 													-p "dhcp-option DOMAIN cluster.local" \
