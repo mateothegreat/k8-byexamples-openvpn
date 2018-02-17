@@ -8,18 +8,20 @@
 include .make/Makefile.inc
 # include $(MAKE_INCLUDE)/Makefile.inc
 
-NAME	    ?= docker-alpine-openvpn
-VERSION	    ?= 1.0.0
-NS			?= default
-CN			?= vpn.streaming-platform.com
-DATA_VOLUME	?= openvpn-data
-REMOTE_TAG  ?= gcr.io/bebuildin/cluster-1/infra-openvpn:latest
+NAME	    	?= docker-alpine-openvpn
+VERSION	    	?= 1.0.0
+NS				?= default
+CN				?= vpn.streaming-platform.com
+DATA_VOLUME		?= openvpn-data
+REMOTE_TAG  	?= gcr.io/streaming-platform-devqa/cluster-4/infra-openvpn:latest
+APP				?= openvpn
+LOADBALANCER_IP ?= 
 export
 
 ## Performs all setup tasks (make prepare pki config copy build). Push the docker image to your repo & next just make issue-cert NAME=cert
 deploy: setup install
 
-setup:  prepare pki config copy build
+setup:  prepare config pki copy build
 
 ## Delete docker volume and kubernetes deployment & service
 clean: delete
@@ -32,7 +34,7 @@ prepare:
 	docker volume create --name $(DATA_VOLUME)
 
 ## Generate openvpn configurations
-config: prepare
+config: guard-PODS_SUBNET guard-SERVICES_SUBNET prepare
 # -u for the VPN server address and port
 # -n for all the DNS servers to use
 # -s to define the VPN subnet (as it defaults to 10.2.0.0 which is used by Kubernetes already)
@@ -45,8 +47,8 @@ config: prepare
 	@docker run --net=none 	-v $(DATA_VOLUME):/etc/openvpn --rm \
 				kylemanna/openvpn ovpn_genconfig -d	-N -u tcp://$(CN) 	\
 													-n 10.11.240.10 \
-													-p "route 10.8.0.0 255.255.0.0" \
-													-p "route 10.11.0.0 255.255.0.0" \
+													-p "route $(PODS_SUBNET)" \
+													-p "route $(SERVICES_SUBNET)" \
 													-p "dhcp-option DOMAIN cluster.local" \
 													-p "dhcp-option DOMAIN svc.cluster.local" \
 													-p "dhcp-option DOMAIN default.svc.cluster.local"
@@ -56,7 +58,7 @@ config: prepare
 	docker run --net=none -v openvpn-data:/etc/openvpn -i --rm kylemanna/openvpn cat /etc/openvpn/openvpn.conf
 
 ## Generate certificates
-pki: prepare
+pki: config
 
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it -e EASYRSA_KEY_SIZE=1024 kylemanna/openvpn ovpn_initpki nopass yes
 
@@ -101,3 +103,9 @@ issue-client:
 
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it kylemanna/openvpn easyrsa build-client-full $(NAME) nopass
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm kylemanna/openvpn ovpn_getclient $(NAME) > $(NAME).ovpn
+
+## Overwrites /etc/resolv.conf with cluster settings
+resolv-conf: 
+
+	sudo echo "search cluster.local svc.cluster.local default.svc.cluster.local" > /etc/resolv.conf
+	sudo echo "nameserver 10.31.240.10" >> /etc/resolv.conf

@@ -9,6 +9,7 @@ spec:
     metadata:
       labels:
         openvpn: "$CN"
+        app: openvpn
     spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 60
