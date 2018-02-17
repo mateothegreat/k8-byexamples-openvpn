@@ -71,7 +71,7 @@ copy:
 	-docker rm -f openvpn
 
 
-	docker run --net=none --rm -d -v $(DATA_VOLUME):/etc/openvpn kylemanna/openvpn ovpn_copy_server_files
+	docker run --net=none --rm -v $(DATA_VOLUME):/etc/openvpn kylemanna/openvpn ovpn_copy_server_files
 	docker run -v $(DATA_VOLUME):/etc/openvpn -d -p 1194:1194/udp --cap-add=NET_ADMIN --name openvpn kylemanna/openvpn
 
 	docker cp openvpn:/etc/openvpn openvpn
