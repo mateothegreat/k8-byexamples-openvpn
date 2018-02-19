@@ -8,21 +8,20 @@
 include .make/Makefile.inc
 # include $(MAKE_INCLUDE)/Makefile.inc
 
-NAME	    	?= docker-alpine-openvpn
+IMAGE_NAME    	?= docker-alpine-openvpn
 VERSION	    	?= 1.0.0
 NS				?= default
-CN				?= vpn.streaming-platform.com
-DATA_VOLUME		?= openvpn-data
+CN				?= 
+DATA_VOLUME		?= $(CN)-openvpn-data
 REMOTE_TAG  	?= gcr.io/streaming-platform-devqa/cluster-4/infra-openvpn:latest
 APP				?= openvpn
 DNS				?= 
-LOADBALANCER_IP ?= 
 export
 
 ## Performs all setup tasks (make prepare pki config copy build). Push the docker image to your repo & next just make issue-cert NAME=cert
 deploy: setup install
 
-setup:  prepare config pki copy build
+setup:  prepare config pki copy build push
 
 ## Delete docker volume and kubernetes deployment & service
 clean: delete
@@ -42,13 +41,13 @@ config: guard-PODS_SUBNET guard-SERVICES_SUBNET guard-DNS prepare
 # -d to disable NAT
 # -p to push options to the client
 # -N to enable NAT: it seems critical for this setup on Kubernetes
+# -p "route $(PODS_SUBNET)" \
 
 	@docker run --net=none -v openvpn-data:/etc/openvpn -i --rm kylemanna/openvpn rm -rf /etc/openvpn/openvpn.conf /etc/openvpn/ovpn_env.sh
 
 	@docker run --net=none 	-v $(DATA_VOLUME):/etc/openvpn --rm \
 				kylemanna/openvpn ovpn_genconfig -d	-N -u tcp://$(CN) 	\
 													-n $(DNS) \
-													-p "route $(PODS_SUBNET)" \
 													-p "route $(SERVICES_SUBNET)" \
 													-p "dhcp-option DOMAIN cluster.local" \
 													-p "dhcp-option DOMAIN svc.cluster.local" \
@@ -61,7 +60,7 @@ config: guard-PODS_SUBNET guard-SERVICES_SUBNET guard-DNS prepare
 ## Generate certificates
 pki: config
 
-	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it -e EASYRSA_KEY_SIZE=1024 kylemanna/openvpn ovpn_initpki nopass yes
+	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -i -e EASYRSA_KEY_SIZE=1024 kylemanna/openvpn ovpn_initpki nopass yes
 
 ## Copy all configuration and certificate data from docker volume to ./openvpn
 copy:
@@ -79,13 +78,13 @@ copy:
 ## Build docker image with config & cert data
 build:
 
-	docker build --rm --tag $(NAME):$(VERSION) .
-	docker tag $(NAME):$(VERSION) $(REMOTE_TAG)
+	docker build --rm --tag $(IMAGE_NAME):$(VERSION) .
+	docker tag $(IMAGE_NAME):$(VERSION) $(REMOTE_TAG)
 
-## Push docker image using `gcloud`
-push-gcloud:
+## Push docker image to docker hub
+push:
 
-	gcloud docker -- push $(REMOTE_TAG)
+	docker push $(REMOTE_TAG)
 
 ## Dumps docker volume (certs and data) to a tarball locally
 backup:
@@ -100,9 +99,9 @@ restore:
 
 
 ## Generate client certificate (make issue-client NAME="my-client-name")
-issue-client:
+issue-cert:
 
-	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -it kylemanna/openvpn easyrsa build-client-full $(NAME) nopass
+	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm -i kylemanna/openvpn easyrsa build-client-full $(NAME) nopass
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm kylemanna/openvpn ovpn_getclient $(NAME) > $(NAME).ovpn
 
 ## Overwrites /etc/resolv.conf with cluster settings

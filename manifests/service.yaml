@@ -8,8 +8,13 @@ spec:
   # type: LoadBalancer
   # loadBalancerIP: $LOADBALANCER_IP
   ports:
-  - port: 1194
+  - name: tcp
+    port: 1194
     protocol: TCP
+    targetPort: 1194
+  - name: udp
+    port: 1194
+    protocol: UDP
     targetPort: 1194
   selector:
     openvpn: "$CN"
