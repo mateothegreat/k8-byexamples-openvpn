@@ -27,6 +27,7 @@ setup:  prepare config pki copy build push
 clean: delete
 
 	-docker rm -f -v openvpn
+	-docker volume rm $(DATA_VOLUME)
 
 ## Prepare the docker volume for storing vpn config and cert data
 prepare:
@@ -105,7 +106,9 @@ issue-cert:
 	docker run --net=none -v $(DATA_VOLUME):/etc/openvpn --rm kylemanna/openvpn ovpn_getclient $(NAME) > $(NAME).ovpn
 
 ## Overwrites /etc/resolv.conf with cluster settings
-resolv-conf: 
+resolv-conf: guard-DNS
 
 	sudo echo "search cluster.local svc.cluster.local default.svc.cluster.local" > /etc/resolv.conf
-	sudo echo "nameserver 10.31.240.10" >> /etc/resolv.conf
+	sudo echo "nameserver $(DNS)" >> /etc/resolv.conf
+
+	nslookup kubernetes
