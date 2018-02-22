@@ -110,5 +110,7 @@ resolv-conf: guard-DNS
 
 	sudo echo "search cluster.local svc.cluster.local default.svc.cluster.local" > /etc/resolv.conf
 	sudo echo "nameserver $(DNS)" >> /etc/resolv.conf
+	sudo echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+	sudo echo "nameserver 8.8.4.4" >> /etc/resolv.conf
 
 	nslookup kubernetes
