@@ -13,7 +13,8 @@ VERSION	    	?= 1.0.0
 NS				?= default
 CN				?= 
 DATA_VOLUME		?= $(CN)-openvpn-data
-REMOTE_TAG  	?= gcr.io/streaming-platform-devqa/cluster-4/infra-openvpn:latest
+# REMOTE_TAG  	?= gcr.io/streaming-platform-devqa/cluster-4/infra-openvpn:latest
+REMOTE_TAG  	?= docker.io/appsoa/docker-alpine-k8-devenv:latest
 APP				?= openvpn
 DNS				?= 
 export
@@ -35,7 +36,7 @@ prepare:
 	docker volume create --name $(DATA_VOLUME)
 
 ## Generate openvpn configurations
-config: guard-PODS_SUBNET guard-SERVICES_SUBNET guard-DNS prepare
+config: guard-SERVICES_SUBNET guard-DNS prepare
 # -u for the VPN server address and port
 # -n for all the DNS servers to use
 # -s to define the VPN subnet (as it defaults to 10.2.0.0 which is used by Kubernetes already)
