@@ -36,7 +36,7 @@ prepare:
 	docker volume create --name $(DATA_VOLUME)
 
 ## Generate openvpn configurations
-config: guard-SERVICES_SUBNET guard-DNS prepare
+config: guard-PODS_SUBNET guard-SERVICES_SUBNET guard-DNS prepare
 # -u for the VPN server address and port
 # -n for all the DNS servers to use
 # -s to define the VPN subnet (as it defaults to 10.2.0.0 which is used by Kubernetes already)
@@ -50,6 +50,7 @@ config: guard-SERVICES_SUBNET guard-DNS prepare
 	@docker run --net=none 	-v $(DATA_VOLUME):/etc/openvpn --rm \
 				kylemanna/openvpn ovpn_genconfig -d	-N -u tcp://$(CN) 	\
 													-n $(DNS) \
+													-p "route $(PODS_SUBNET)" \
 													-p "route $(SERVICES_SUBNET)" \
 													-p "dhcp-option DOMAIN cluster.local" \
 													-p "dhcp-option DOMAIN svc.cluster.local" \
