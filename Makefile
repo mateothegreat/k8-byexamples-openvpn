@@ -10,14 +10,14 @@ include .make/Makefile.inc
 
 IMAGE_NAME    	?= docker-alpine-openvpn
 VERSION	    	?= 1.0.0
-NS		?= default
-CN		?= 
-DATA_VOLUME	?= $(CN)-openvpn-data
-REMOTE_TAG  	?= docker.io/appsoa/docker-alpine-k8-devenv:latest
-APP		?= openvpn
-DNS		?= <INSERT DNS SERVICE IP HERE LIKE: 10.10.10.10>
-PODS_SUBNET	?= <INSERT POD SUBNET HERE LIKE: 10.10.0.0 255.255.0.0>
-SERVICES_SUBNET	?= <INSERT SERVICES SUBNET HERE LIKE: 10.10.0.0 255.255.255.0>
+NS				?= default
+CN				?= vpn.datalinkbi.app
+DATA_VOLUME		?= $(CN)-openvpn-data
+REMOTE_TAG  	?= gcr.io/datalinkbi/openvpn:latest
+APP				?= openvpn
+DNS				?= 10.15.240.10
+PODS_SUBNET		?= 10.12.0.0 255.255.0.0
+SERVICES_SUBNET	?= 10.15.0.0 255.255.0.0
 export
 
 ## Performs all setup tasks (make prepare pki config copy build). Push the docker image to your repo & next just make issue-cert NAME=cert

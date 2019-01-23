@@ -1,29 +1,32 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: openvpn
+  labels:
+    app: openvpn
 spec:
-  # revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: openvpn
   replicas: 1
   template:
     metadata:
       labels:
-        openvpn: "$CN"
         app: openvpn
     spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 60
       containers:
-      - name: openvpn
-        image: $REMOTE_TAG
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-        resources:
-          limits:
-            cpu: 200m
-            memory: 100Mi
-          requests:
-            cpu: 100m
-            memory: 50Mi
+        - name: openvpn
+          image: $REMOTE_TAG
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          resources:
+            limits:
+              cpu: 200m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 50Mi
