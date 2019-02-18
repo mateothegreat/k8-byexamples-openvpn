@@ -8,7 +8,6 @@ spec:
   type: LoadBalancer
   selector:
     app: openvpn
-  loadBalancerIP: 35.237.162.135
   ports:
     - name: tcp
       port: 1194
